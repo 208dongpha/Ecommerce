@@ -3,20 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 
-# Env
-.env
-
 # Data
 data/
 *.csv
 *.parquet
-
-# Airflow
-airflow/logs/
-
-# Spark
-spark/logs/
-
-# OS
-.DS_Store
-Thumbs.db
