@@ -1,0 +1,9 @@
+| Layer         | Tech                           |
+| ------------- | ------------------------------ |
+| Ingestion     | **Kafka**                      |
+| Processing    | **Spark Structured Streaming** |
+| Storage       | **S3 (Data Lake)**             |
+| DWH           | **PostgreSQL**                 |
+| Orchestration | **Airflow**                    |
+| Infra         | **Docker + docker-compose**    |
+| Language      | **Python + SQL**               |
