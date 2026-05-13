@@ -1,0 +1,16 @@
+kafka: 
+airflow: http://localhost:8081
+spark: http://localhost:8080
+MinIO: http://localhost:9001
+
+cd /d D:\Dongphh\ECommerce
+
+chạy spark master: docker exec -it spark-master bash
+
+/opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
+/opt/spark-apps/streaming_job.py
+
+mkdir -p /tmp/.ivy2/cache
+mkdir -p /tmp/.ivy2/jars
