@@ -1,6 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
+from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import *
+
+# =========================
+# SPARK SESSION
+# =========================
 
 spark = SparkSession.builder \
     .appName("EcommerceStreaming") \
@@ -9,36 +13,73 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("ERROR")
 
+# =========================
+# MINIO CONFIG
+# =========================
+
+hadoopConf = spark._jsc.hadoopConfiguration()
+
+hadoopConf.set("fs.s3a.endpoint", "http://minio:9000")
+hadoopConf.set("fs.s3a.access.key", "minioadmin")
+hadoopConf.set("fs.s3a.secret.key", "minioadmin123")
+
+hadoopConf.set("fs.s3a.path.style.access", "true")
+
+hadoopConf.set(
+    "fs.s3a.impl",
+    "org.apache.hadoop.fs.s3a.S3AFileSystem"
+)
+
+# =========================
+# SCHEMA
+# =========================
+
 schema = StructType([
     StructField("event_time", StringType(), True),
-    StructField("user_id", IntegerType(), True),
-    StructField("product_id", IntegerType(), True),
+    StructField("user_id", StringType(), True),
+    StructField("product_id", StringType(), True),
     StructField("action", StringType(), True),
     StructField("price", IntegerType(), True),
+    StructField("revenue", IntegerType(), True),
     StructField("category", StringType(), True)
 ])
 
-# Read stream from kafka
+# =========================
+# READ KAFKA STREAM
+# =========================
+
 df = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "kafka:9092") \
     .option("subscribe", "ecommerce-events") \
-    .option("startingOffsets", "earliest") \
+    .option("startingOffsets", "latest") \
     .load()
 
-# Convert binary to string
-json_df = df.selectExpr("CAST(value AS STRING)")
+# =========================
+# PARSE JSON
+# =========================
 
-# Parse JSON
+json_df = df.selectExpr("CAST(value AS STRING) as json")
+
 parsed_df = json_df.select(
-    from_json(col("value"), schema).alias("data")
+    from_json(col("json"), schema).alias("data")
 ).select("data.*")
 
-# Output
+# =========================
+# WRITE TO MINIO
+# =========================
+
 query = parsed_df.writeStream \
-    .format("console") \
+    .format("parquet") \
+    .option(
+        "path",
+        "s3a://ecommerce/bronze/events"
+    ) \
+    .option(
+        "checkpointLocation",
+        "/opt/checkpoints/ecommerce-events"
+    ) \
     .outputMode("append") \
-    .option("truncate", False) \
     .start()
 
 query.awaitTermination()

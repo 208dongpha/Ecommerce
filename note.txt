@@ -10,6 +10,7 @@ chạy spark master: docker exec -it spark-master bash
 /opt/spark/bin/spark-submit \
 --master spark://spark-master:7077 \
 --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
+--conf spark.jars.ivy=/tmp/.ivy2 \
 /opt/spark-apps/streaming_job.py
 
 mkdir -p /tmp/.ivy2/cache
