@@ -5,7 +5,11 @@ MinIO: http://localhost:9001
 
 cd /d D:\Dongphh\ECommerce
 
+1. chạy test sparkmaster  đã nhận dữ liệu từ kafka chưa
 chạy spark master: docker exec -it spark-master bash
+
+mkdir -p /tmp/.ivy2/cache
+mkdir -p /tmp/.ivy2/jars
 
 /opt/spark/bin/spark-submit \
 --master spark://spark-master:7077 \
@@ -13,5 +17,121 @@ chạy spark master: docker exec -it spark-master bash
 --conf spark.jars.ivy=/tmp/.ivy2 \
 /opt/spark-apps/streaming_job.py
 
+E-Commerce Streaming Pipeline — Full Steps
+1. Start Docker
+docker compose up -d
+
+Kiểm tra container:
+
+docker ps
+2. Create Kafka Topic
+
+Vào Kafka container:
+
+docker exec -it kafka bash
+
+Tạo topic:
+
+kafka-topics \
+--bootstrap-server kafka:9092 \
+--create \
+--topic ecommerce-events
+
+Check topic:
+
+kafka-topics \
+--bootstrap-server kafka:9092 \
+--list
+3. Run Producer Simulator
+
+File:
+
+producer/producer.py
+
+Run:
+
+cd producer
+python producer.py
+
+Nếu OK:
+
+[OK] topic=ecommerce-events partition=0 offset=...
+4. Open MinIO
+
+MinIO Console:
+
+http://localhost:9001
+
+Login:
+
+user: minioadmin
+pass: minioadmin123
+
+Create bucket:
+
+ecommerce
+5. Run Bronze Streaming Job
+
+Vào Spark container:
+
+docker exec -it spark-master bash
+
+Fix Ivy:
+
 mkdir -p /tmp/.ivy2/cache
 mkdir -p /tmp/.ivy2/jars
+
+Run Bronze:
+
+/opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+--conf spark.jars.ivy=/tmp/.ivy2 \
+--total-executor-cores 2 \
+--executor-cores 1 \
+--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.apache.hadoop:hadoop-aws:3.3.4 \
+/opt/spark-apps/streaming_job.py
+6. Bronze Job Function
+
+Bronze:
+
+đọc Kafka stream
+parse JSON
+lưu raw parquet vào MinIO
+
+Output:
+
+s3a://ecommerce/bronze/events
+7. Run Silver Job
+
+Mở terminal mới:
+
+docker exec -it spark-master bash
+
+Run Silver:
+
+/opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+--conf spark.jars.ivy=/tmp/.ivy2 \
+--total-executor-cores 2 \
+--executor-cores 1 \
+--packages org.apache.hadoop:hadoop-aws:3.3.4 \
+/opt/spark-apps/silver_job.py
+8. Silver Job Function
+
+Silver:
+
+đọc Bronze parquet
+clean data
+add features
+transform business columns
+
+Ví dụ:
+
+event_date
+event_hour
+is_purchase
+is_refund
+
+Output:
+
+s3a://ecommerce/silver/events
