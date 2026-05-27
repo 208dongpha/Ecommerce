@@ -53,6 +53,7 @@ df = spark.readStream \
     .option("kafka.bootstrap.servers", "kafka:9092") \
     .option("subscribe", "ecommerce-events") \
     .option("startingOffsets", "latest") \
+    .option("failOnDataLoss", "false") \
     .load()
 
 # =========================
