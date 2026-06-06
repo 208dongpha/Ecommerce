@@ -169,6 +169,26 @@ services:
     command: -c "airflow db init && airflow users create --username ${AIRFLOW_ADMIN_USER:-admin} --password ${AIRFLOW_ADMIN_PASSWORD:-admin123} --firstname ${AIRFLOW_ADMIN_FIRSTNAME:-Admin} --lastname ${AIRFLOW_ADMIN_LASTNAME:-User} --role Admin --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com}"
     networks:
       - ecommerce-network
+  
+  trino:
+    image: trinodb/trino:444
+    container_name: trino
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./trino/catalog:/etc/trino/catalog
+    networks:
+      - ecommerce-network
+
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ecommerce-secret
+    networks:
+      - ecommerce-network
 volumes:
   minio_data:
   postgres_dwh_data:

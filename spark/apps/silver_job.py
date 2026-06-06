@@ -48,27 +48,22 @@ bronze_df = spark.readStream \
 silver_df = bronze_df \
     .withColumn(
         "event_time",
-        to_timestamp(col("event_time"))
-    ) \
+        to_timestamp(col("event_time"))) \
     .filter(col("user_id").isNotNull()) \
     .filter(col("product_id").isNotNull()) \
     .dropDuplicates() \
     .withColumn(
         "event_date",
-        to_date(col("event_time"))
-    ) \
+        to_date(col("event_time"))) \
     .withColumn(
         "event_hour",
-        hour(col("event_time"))
-    ) \
+        hour(col("event_time"))) \
     .withColumn(
         "is_purchase",
-        when(col("action") == "purchase", 1).otherwise(0)
-    ) \
+        when(col("action") == "purchase", 1).otherwise(0)) \
     .withColumn(
         "is_refund",
-        when(col("action") == "return_refund", 1).otherwise(0)
-    )
+        when(col("action") == "return_refund", 1).otherwise(0))
 
 # =========================
 # Write Silver Layer

@@ -2,6 +2,7 @@ kafka:
 airflow: http://localhost:8081
 spark: http://localhost:8080
 MinIO: http://localhost:9001
+Trino: http://localhost:8085
 
 cd /d D:\Dongphh\ECommerce
 
@@ -83,11 +84,10 @@ mkdir -p /tmp/.ivy2/jars
 
 Run Bronze:
 
+SPARK_SUBMIT_OPTS="-Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2" \
 /opt/spark/bin/spark-submit \
 --master spark://spark-master:7077 \
---conf spark.jars.ivy=/tmp/.ivy2 \
---total-executor-cores 2 \
---executor-cores 1 \
+--total-executor-cores 4 \
 --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.apache.hadoop:hadoop-aws:3.3.4 \
 /opt/spark-apps/streaming_job.py
 6. Bronze Job Function
@@ -109,11 +109,10 @@ docker exec -it spark-master bash
 
 Run Silver:
 
+SPARK_SUBMIT_OPTS="-Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2" \
 /opt/spark/bin/spark-submit \
 --master spark://spark-master:7077 \
---conf spark.jars.ivy=/tmp/.ivy2 \
---total-executor-cores 2 \
---executor-cores 1 \
+--total-executor-cores 4 \
 --packages org.apache.hadoop:hadoop-aws:3.3.4 \
 /opt/spark-apps/silver_job.py
 8. Silver Job Function
