@@ -134,3 +134,152 @@ is_refund
 Output:
 
 s3a://ecommerce/silver/events
+
+9. Run Gold Batch Job
+Mục tiêu
+
+Tạo bảng business metrics để BI đọc nhanh.
+
+Input:
+
+s3a://ecommerce/silver/events
+
+Output:
+
+s3a://ecommerce/gold/sales_metrics
+File
+spark/jobs/batch_job.py
+
+Run:
+
+docker exec -it spark-master bash
+
+SPARK_SUBMIT_OPTS="-Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2" \
+/opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+--packages org.apache.hadoop:hadoop-aws:3.3.4 \
+/opt/spark-apps/batch_job.py
+
+Kiểm tra log:
+
+SparkContext stopped successfully
+
+=> Gold tạo thành công.
+
+10. Verify Gold Data
+
+Vào MinIO:
+
+http://localhost:9001
+
+Bucket:
+
+ecommerce
+
+Thấy:
+
+gold/
+ └── sales_metrics/
+11. Load Gold → PostgreSQL DWH
+File
+spark/jobs/load_gold_to_postgres.py
+
+Run:
+
+docker exec -it spark-master bash
+
+SPARK_SUBMIT_OPTS="-Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2" \
+/opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+--packages org.apache.hadoop:hadoop-aws:3.3.4,org.postgresql:postgresql:42.7.3 \
+/opt/spark-apps/load_gold_to_postgres.py
+12. Verify PostgreSQL
+
+Vào DWH database:
+
+docker exec -it ecommerce-postgres-dwh-1 psql -U postgres -d ecommerce
+
+Kiểm tra bảng:
+
+\dt
+
+Kết quả:
+
+sales_metrics
+
+Kiểm tra dữ liệu:
+
+SELECT * FROM sales_metrics;
+
+hoặc:
+
+SELECT COUNT(*) FROM sales_metrics;
+13. Start Superset
+
+Nếu chưa có:
+
+docker run -d \
+--name superset \
+-p 8088:8088 \
+apache/superset:latest
+14. Open Superset
+http://localhost:8088
+
+Login:
+
+admin
+admin
+15. Connect PostgreSQL
+
+Settings
+
+↓
+
+Database Connections
+
+↓
+
+Database
+
+Chọn:
+
+PostgreSQL
+
+Connection URI:
+
+postgresql+psycopg2://postgres:postgres@ecommerce-postgres-dwh-1:5432/ecommerce
+
+Hoặc nếu dùng host Windows:
+
+postgresql+psycopg2://postgres:postgres@host.docker.internal:5432/ecommerce
+
+Test Connection
+
+↓
+
+Connect
+
+16. Create Dataset
+
+Vào:
+
+Datasets
+
+↓
+
+Add Dataset
+
+Chọn:
+
+Database:
+PostgreSQL
+
+Schema:
+
+public
+
+Table:
+
+sales_metrics
+
+Save
