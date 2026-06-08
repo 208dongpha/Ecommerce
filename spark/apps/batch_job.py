@@ -24,9 +24,20 @@ gold_df = silver_df.groupBy(
     "category"
 ).agg(
     sum("revenue").alias("total_revenue"),
+
     sum("is_purchase").alias("total_orders"),
+
     sum("is_refund").alias("total_refunds"),
-    avg("price").alias("avg_price")
+
+    countDistinct("user_id").alias("unique_users"),
+
+    countDistinct("product_id").alias("unique_products"),
+
+    avg("price").alias("avg_price"),
+
+    max("price").alias("max_price"),
+
+    min("price").alias("min_price")
 )
 
 gold_df.write \

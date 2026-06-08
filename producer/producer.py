@@ -3,13 +3,19 @@ from kafka.errors import KafkaError
 import json
 import random
 import time
+import os
 from datetime import datetime, timezone
 
 # =========================
 # Kafka Producer
 # =========================
+BOOTSTRAP_SERVERS = os.getenv(
+    "KAFKA_BOOTSTRAP_SERVERS",
+    "localhost:29092"
+)
+
 producer = KafkaProducer(
-    bootstrap_servers="localhost:29092",
+    bootstrap_servers=BOOTSTRAP_SERVERS,
     value_serializer=lambda v: json.dumps(v).encode("utf-8"),
 
     # reliability
@@ -52,9 +58,12 @@ ACTION_WEIGHTS = [15, 45, 10, 5, 12, 3, 5, 4, 2, 1]
 
 print("Sending events to Kafka...\n")
 
+NUM_EVENTS = int(os.getenv("NUM_EVENTS", "1000"))
+
+
 try:
 
-    while True:
+    for _ in range(NUM_EVENTS):
 
         category = random.choices(
             list(CATEGORY_CONFIG.keys()),
@@ -91,20 +100,19 @@ try:
             value=event
         )
 
-        # force send + catch errors
-        record_metadata = future.get(timeout=10)
+        metadata = future.get(timeout=10)
 
         print(
-            f"[OK] topic={record_metadata.topic} "
-            f"partition={record_metadata.partition} "
-            f"offset={record_metadata.offset}"
+            f"[OK] topic={metadata.topic} "
+            f"partition={metadata.partition} "
+            f"offset={metadata.offset}"
         )
 
-        print(event)
-
-        producer.flush()
-
+        print(json.dumps(event, indent=2))
+        print("-" * 50)
         time.sleep(1)
+
+    print(f"Generated {NUM_EVENTS} events successfully")
 
 except KeyboardInterrupt:
     print("\nStopping producer...")

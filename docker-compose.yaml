@@ -132,6 +132,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./producer:/opt/airflow/producer
     command: webserver
     networks:
       - ecommerce-network
@@ -152,6 +153,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./producer:/opt/airflow/producer
     command: scheduler
     networks:
       - ecommerce-network
