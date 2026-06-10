@@ -71,7 +71,7 @@ parsed_df = json_df.select(
 # =========================
 
 query = parsed_df.writeStream \
-    .format("parquet") \
+    .format("delta") \
     .option(
         "path",
         "s3a://ecommerce/bronze/events"

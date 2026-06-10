@@ -740,3 +740,31 @@ Traceback (most recent call last):
 NameError: name 'generate_data' is not defined
 [2026-06-08T14:37:27.248+0000] {processor.py:842} WARNING - No viable dags retrieved from /opt/airflow/dags/ecommerce_pipeline.py
 [2026-06-08T14:37:27.281+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ecommerce_pipeline.py took 0.072 seconds
+[2026-06-08T14:37:57.434+0000] {processor.py:161} INFO - Started process (PID=436) to work on /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:37:57.435+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ecommerce_pipeline.py for tasks to queue
+[2026-06-08T14:37:57.437+0000] {logging_mixin.py:188} INFO - [2026-06-08T14:37:57.436+0000] {dagbag.py:540} INFO - Filling up the DagBag from /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:37:57.461+0000] {logging_mixin.py:188} INFO - [2026-06-08T14:37:57.456+0000] {dagbag.py:350} ERROR - Failed to import: /opt/airflow/dags/ecommerce_pipeline.py
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/dagbag.py", line 346, in parse
+    loader.exec_module(new_module)
+  File "<frozen importlib._bootstrap_external>", line 843, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/opt/airflow/dags/ecommerce_pipeline.py", line 53, in <module>
+    generate_data >> gold_job >> load_postgres
+NameError: name 'generate_data' is not defined
+[2026-06-08T14:37:57.462+0000] {processor.py:842} WARNING - No viable dags retrieved from /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:37:57.493+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ecommerce_pipeline.py took 0.064 seconds
+[2026-06-08T14:38:27.690+0000] {processor.py:161} INFO - Started process (PID=441) to work on /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:38:27.691+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ecommerce_pipeline.py for tasks to queue
+[2026-06-08T14:38:27.693+0000] {logging_mixin.py:188} INFO - [2026-06-08T14:38:27.692+0000] {dagbag.py:540} INFO - Filling up the DagBag from /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:38:27.718+0000] {logging_mixin.py:188} INFO - [2026-06-08T14:38:27.713+0000] {dagbag.py:350} ERROR - Failed to import: /opt/airflow/dags/ecommerce_pipeline.py
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/dagbag.py", line 346, in parse
+    loader.exec_module(new_module)
+  File "<frozen importlib._bootstrap_external>", line 843, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/opt/airflow/dags/ecommerce_pipeline.py", line 53, in <module>
+    generate_data >> gold_job >> load_postgres
+NameError: name 'generate_data' is not defined
+[2026-06-08T14:38:27.719+0000] {processor.py:842} WARNING - No viable dags retrieved from /opt/airflow/dags/ecommerce_pipeline.py
+[2026-06-08T14:38:27.749+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ecommerce_pipeline.py took 0.062 seconds

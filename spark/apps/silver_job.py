@@ -38,8 +38,7 @@ schema = StructType([
 # Read Bronze Stream
 # =========================
 bronze_df = spark.readStream \
-    .format("parquet") \
-    .schema(schema) \
+    .format("delta") \
     .load("s3a://ecommerce/bronze/events")
 
 # =========================
@@ -69,7 +68,7 @@ silver_df = bronze_df \
 # Write Silver Layer
 # =========================
 query = silver_df.writeStream \
-    .format("parquet") \
+    .format("delta") \
     .option("path", "s3a://ecommerce/silver/events") \
     .option("checkpointLocation", "/tmp/checkpoints/silver") \
     .outputMode("append") \
