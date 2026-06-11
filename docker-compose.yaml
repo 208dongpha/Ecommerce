@@ -94,6 +94,7 @@ services:
     volumes:
       - ./spark/apps:/opt/spark-apps
       - ./spark/checkpoints:/opt/checkpoints
+      - ./spark/ivy:/tmp/.ivy2
     networks:
       - ecommerce-network
     restart: unless-stopped
@@ -110,6 +111,7 @@ services:
     volumes:
       - ./spark/apps:/opt/spark-apps
       - ./spark/checkpoints:/opt/checkpoints
+      - ./spark/ivy:/tmp/.ivy2
     networks:
       - ecommerce-network
     restart: unless-stopped

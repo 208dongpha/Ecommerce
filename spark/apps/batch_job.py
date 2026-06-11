@@ -4,6 +4,10 @@ from pyspark.sql.functions import *
 spark = SparkSession.builder \
     .appName("GoldBatch") \
     .master("spark://spark-master:7077") \
+    .config("spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension") \
+    .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
     .getOrCreate()
 
 # MinIO config
@@ -15,7 +19,7 @@ hadoopConf.set("fs.s3a.endpoint", "http://minio:9000")
 hadoopConf.set("fs.s3a.path.style.access", "true")
 hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 
-silver_df = spark.read.parquet(
+silver_df = spark.read.format("delta").load(
     "s3a://ecommerce/silver/events"
 )
 
@@ -41,7 +45,8 @@ gold_df = silver_df.groupBy(
 )
 
 gold_df.write \
+    .format("delta") \
     .mode("overwrite") \
-    .parquet("s3a://ecommerce/gold/sales_metrics")
+    .save("s3a://ecommerce/gold/sales_metrics")
 
 spark.stop()
