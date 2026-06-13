@@ -190,12 +190,18 @@ services:
     ports:
       - "8088:8088"
     environment:
-      SUPERSET_SECRET_KEY: ecommerce-secret
+      SUPERSET_SECRET_KEY: "ecommerce-secret-key-12345"
+      # Ép script khởi động của Apache cài đặt driver vào môi trường chạy
+      ADDITIONAL_REQUIREMENTS: "pandas kafka-python python-dotenv pyspark trino==0.337.0"
+    volumes:
+        # Ghim dữ liệu database SQLite cố định, không lo bị reset mất mật khẩu admin
+      - superset_home:/app/superset_home
     networks:
       - ecommerce-network
 volumes:
   minio_data:
   postgres_dwh_data:
   postgres_airflow_data:
+  superset_home:
 networks:
   ecommerce-network:

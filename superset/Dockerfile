@@ -1,9 +1,10 @@
-FROM apache/superset:latest
+FROM apache/superset:3.1.0
 
 USER root
+RUN pip install --no-cache-dir trino==0.337.0
 
-RUN which python || true
-RUN python --version || true
-RUN find / -name python 2>/dev/null | head -20 || true
+# Copy requirements nếu có
+# COPY requirements.txt /tmp/
+# RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 USER superset

@@ -110,7 +110,7 @@ try:
 
         print(json.dumps(event, indent=2))
         print("-" * 50)
-        time.sleep(1)
+        time.sleep(0.5)
 
     print(f"Generated {NUM_EVENTS} events successfully")
 

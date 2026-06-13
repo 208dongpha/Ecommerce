@@ -55,7 +55,6 @@ The platform leverages a hybrid Lambda/Lakehouse design pattern to eliminate dat
 * **Cloud-Native Object Storage:** MinIO Server (S3-compatible API, hosting decoupled object storage buckets configured for single-node development setup).
 * **Storage Layer Acid Framework:** Delta Lake 2.4+ (Brings ACID transactions, time-travel logging, metadata scaling, and schema evolution to MinIO storage).
 * **Workflow Orchestration Engine:** Apache Airflow 2.7+ (DAG-driven control plane managing execution paths, schedules, and alerts).
-* **Relational Data Warehouse:** PostgreSQL 15+ (The structured analytical database tier layer optimized for BI aggregation query patterns).
 * **Business Intelligence Engine:** Apache Superset (Cloud-native data exploration and visualization platform displaying business-critical dashboards).
 * **Containerization Infrastructure:** Docker Engine & Docker Compose v2 (Containerizes and isolates every standalone component for local development repeatability).
 

@@ -2,4 +2,5 @@ pandas
 kafka-python
 python-dotenv
 pyspark
-pyscop2
+trino==0.337.0
+sqlalchemy-trino==0.5.0
