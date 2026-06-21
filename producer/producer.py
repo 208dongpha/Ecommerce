@@ -110,7 +110,7 @@ try:
 
         print(json.dumps(event, indent=2))
         print("-" * 50)
-        time.sleep(0.5)
+        time.sleep(float(os.getenv("EVENT_SLEEP_SECONDS", "0.01")))
 
     print(f"Generated {NUM_EVENTS} events successfully")
 

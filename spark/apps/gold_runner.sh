@@ -20,6 +20,7 @@ while true; do
       --master spark://spark-master:7077 \
       --packages io.delta:delta-spark_2.12:3.2.0,org.apache.hadoop:hadoop-aws:3.3.4 \
       --conf spark.jars.ivy=/tmp/.ivy2 \
+      --conf spark.cores.max=4 \
       --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension \
       --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog \
       /opt/spark-apps/batch_job.py; then
