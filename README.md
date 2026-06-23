@@ -206,6 +206,41 @@ trino://trino@trino:8080/delta/default
 
 The dashboard should use the `delta.default.sales_metrics` dataset.
 
+### 6. Dashboard Export
+
+The exported dashboard files are stored in:
+
+```text
+dashboards/
+```
+
+Current exported files:
+
+```text
+dashboards/Ecommerce Dashboardv1.html
+dashboards/ecommerce-dashboard-2026-06-23T13-49-34.208Z.jpg
+```
+
+Dashboard preview:
+
+![E-Commerce Lakehouse Sales Analytics dashboard](dashboards/ecommerce-dashboard-2026-06-23T13-49-34.208Z.jpg)
+
+Recommended dashboard name:
+
+```text
+E-Commerce Lakehouse Sales Analytics
+```
+
+Recommended charts:
+
+- Big Number: `SUM(total_revenue)` as `Total Revenue`
+- Big Number: `SUM(total_orders)` as `Total Orders`
+- Bar Chart: `category` vs `SUM(total_revenue)` as `Revenue by Category`
+- Bar Chart: `category` vs `SUM(total_orders)` as `Orders by Category`
+- Line Chart: `event_date` vs `SUM(total_revenue)` as `Daily Revenue Trend`
+
+If the dashboard does not show fresh data, rerun the Gold batch after Silver finishes, then refresh the Superset chart or dashboard.
+
 ## Airflow DAG
 
 Main file:
