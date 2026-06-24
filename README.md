@@ -1,53 +1,71 @@
-# E-Commerce Data Lakehouse Pipeline
+# E-Commerce Lakehouse Analytics Pipeline
 
-This project is a local e-commerce data lakehouse pipeline. It simulates user activity events, streams them through Kafka, stores Bronze and Silver layers as Delta Lake tables on MinIO, runs a daily Gold aggregation with Airflow, and exposes the Gold table to Superset through Trino.
+An end-to-end local data lakehouse project for e-commerce analytics. The pipeline generates synthetic user events, streams them through Kafka, stores Bronze and Silver Delta Lake tables on MinIO, builds a Gold sales metrics table with Spark batch processing, queries the lakehouse with Trino, and visualizes the result in Apache Superset.
+
+This project is designed as a practical data engineering portfolio project. It demonstrates streaming ingestion, medallion architecture, batch aggregation, workflow orchestration, SQL serving, and dashboarding in a Docker Compose environment.
+
+![Pipeline architecture](pipeline.png)
+
+## Project Highlights
+
+- Built a local lakehouse using Kafka, Spark Structured Streaming, Delta Lake, MinIO, Airflow, Trino, and Superset.
+- Implemented a medallion architecture with Bronze, Silver, and Gold Delta tables.
+- Used Spark streaming jobs for continuous Kafka-to-Bronze and Bronze-to-Silver processing.
+- Used Airflow to orchestrate daily event generation and Gold table refresh.
+- Exposed the Gold Delta table through Trino for BI consumption.
+- Created a Superset dashboard for revenue, orders, refunds, and category performance.
 
 ## Architecture
 
 ```text
-Airflow daily DAG
-    |
-    |-- generate_data: produce 1000 events into Kafka
-    |-- wait_for_streaming: wait for Bronze/Silver streaming jobs
-    |-- gold_job: trigger the Gold batch job through gold-runner
+Airflow DAG
+  |
+  |-- generate_data
+  |      Producer -> Kafka topic: ecommerce-events
+  |
+  |-- wait_for_streaming
+  |      Wait for Bronze/Silver streaming jobs
+  |
+  |-- gold_job
+         Trigger Gold batch through gold-runner
 
 Kafka
-    |
-    v
+  |
+  v
 bronze-stream
-    Kafka -> Bronze Delta
-    s3a://ecommerce/bronze/events
-    |
-    v
+  Kafka -> Bronze Delta
+  s3a://ecommerce/bronze/events
+  |
+  v
 silver-stream
-    Bronze Delta -> Silver Delta
-    s3a://ecommerce/silver/events
-    |
-    v
+  Bronze Delta -> Silver Delta
+  s3a://ecommerce/silver/events
+  |
+  v
 gold-runner
-    Silver Delta -> Gold Delta
-    s3a://ecommerce/gold/sales_metrics
-    |
-    v
-Trino -> Superset dashboard
+  Silver Delta -> Gold Delta
+  s3a://ecommerce/gold/sales_metrics
+  |
+  v
+Trino -> Superset Dashboard
 ```
-
-![Pipeline](pipeline.png)
 
 ## Tech Stack
 
-- Apache Kafka: event broker for e-commerce activity data.
-- Apache Spark 3.5.1: Structured Streaming for Bronze/Silver and batch processing for Gold.
-- Delta Lake: table format for Bronze, Silver, and Gold layers.
-- MinIO: S3-compatible object storage for the lakehouse.
-- Apache Airflow: daily orchestration.
-- Trino: SQL query engine over Delta Lake data stored in MinIO.
-- Apache Superset: dashboard and BI layer.
-- Docker Compose: local multi-service runtime.
+| Component | Purpose |
+| --- | --- |
+| Apache Kafka | Event broker for generated e-commerce events |
+| Apache Spark 3.5.1 | Streaming and batch data processing |
+| Delta Lake | Table format for Bronze, Silver, and Gold layers |
+| MinIO | S3-compatible object storage |
+| Apache Airflow | Daily pipeline orchestration |
+| Trino | SQL query engine for Delta Lake tables |
+| Apache Superset | BI dashboard and visualization |
+| Docker Compose | Local multi-service runtime |
 
-## Data Flow
+## Data Pipeline
 
-### 1. Producer
+### 1. Event Producer
 
 Main file:
 
@@ -55,7 +73,9 @@ Main file:
 producer/producer.py
 ```
 
-The producer generates synthetic e-commerce events with these fields:
+The producer generates synthetic e-commerce activity events and sends them to Kafka topic `ecommerce-events`.
+
+Event fields:
 
 - `event_time`
 - `user_id`
@@ -65,7 +85,7 @@ The producer generates synthetic e-commerce events with these fields:
 - `revenue`
 - `category`
 
-Airflow runs the producer daily:
+Airflow runs the producer with:
 
 ```bash
 KAFKA_BOOTSTRAP_SERVERS=kafka:9092 NUM_EVENTS=1000 python producer.py
@@ -79,25 +99,19 @@ Main file:
 spark/apps/streaming_job.py
 ```
 
-The `bronze-stream` service runs continuously. It reads the Kafka topic `ecommerce-events`, parses event JSON, and writes the raw stream to Bronze Delta:
+The `bronze-stream` service runs continuously. It reads Kafka events, parses JSON messages, and writes raw records to Delta Lake.
+
+Output:
 
 ```text
 s3a://ecommerce/bronze/events
 ```
 
-Checkpoint path:
+Checkpoint:
 
 ```text
-/opt/checkpoints/ecommerce-events
+spark/checkpoints/ecommerce-events
 ```
-
-The checkpoint directory is mounted to the host:
-
-```text
-./spark/checkpoints:/opt/checkpoints
-```
-
-Because of this checkpoint, the stream can continue from its previous progress after a container or machine restart.
 
 ### 3. Silver Layer
 
@@ -107,29 +121,29 @@ Main file:
 spark/apps/silver_job.py
 ```
 
-The `silver-stream` service also runs continuously. It reads Bronze Delta data, cleans and enriches it, then writes Silver Delta.
+The `silver-stream` service runs continuously. It reads Bronze Delta data, cleans and enriches the events, and writes the result to the Silver Delta table.
 
-Current Silver transformations:
+Transformations:
 
 - Cast `event_time` to timestamp.
-- Filter null `user_id`.
-- Filter null `product_id`.
+- Remove rows with null `user_id`.
+- Remove rows with null `product_id`.
 - Drop duplicate rows.
 - Add `event_date`.
 - Add `event_hour`.
 - Add `is_purchase`.
 - Add `is_refund`.
 
-Output path:
+Output:
 
 ```text
 s3a://ecommerce/silver/events
 ```
 
-Checkpoint path:
+Checkpoint:
 
 ```text
-/opt/checkpoints/silver
+spark/checkpoints/silver
 ```
 
 ### 4. Gold Layer
@@ -141,26 +155,26 @@ spark/apps/batch_job.py
 spark/apps/gold_runner.sh
 ```
 
-Gold is a batch layer. It does not run forever like Bronze and Silver. Airflow creates a trigger file, and the `gold-runner` service picks it up and runs the Spark batch job.
+Gold is a batch layer. Airflow writes a trigger file, and the `gold-runner` service runs the Spark batch job.
 
-Gold reads:
+Input:
 
 ```text
 s3a://ecommerce/silver/events
 ```
 
-Gold writes:
+Output:
 
 ```text
 s3a://ecommerce/gold/sales_metrics
 ```
 
-The current Gold table aggregates by:
+The Gold table is grouped by:
 
 - `event_date`
 - `category`
 
-Current metrics:
+Metrics:
 
 - `total_revenue`
 - `total_orders`
@@ -171,11 +185,41 @@ Current metrics:
 - `max_price`
 - `min_price`
 
-### 5. Trino and Superset
+## Airflow Orchestration
 
-Trino does not store data. It queries the Gold Delta table directly from MinIO.
+Main file:
 
-Trino catalog config:
+```text
+airflow/dags/ecommerce_pipeline.py
+```
+
+DAG flow:
+
+```text
+generate_data -> wait_for_streaming -> gold_job
+```
+
+Tasks:
+
+- `generate_data`: produces 1000 events into Kafka.
+- `wait_for_streaming`: waits for Bronze and Silver to process the new events.
+- `gold_job`: creates a Gold trigger file and waits for success or failure.
+
+Airflow communicates with `gold-runner` through:
+
+```text
+airflow/triggers
+```
+
+Trigger files:
+
+- `gold.request`: request a Gold batch run.
+- `gold.done`: Gold batch completed successfully.
+- `gold.failed`: Gold batch failed.
+
+## Trino Setup
+
+Trino queries Delta Lake data directly from MinIO. The catalog config is located at:
 
 ```text
 trino/catalog/delta.properties
@@ -184,6 +228,9 @@ trino/catalog/delta.properties
 After the Gold table exists, register it in Trino:
 
 ```sql
+CREATE SCHEMA IF NOT EXISTS delta.default
+WITH (location = 's3://ecommerce/');
+
 CALL delta.system.register_table(
     schema_name => 'default',
     table_name => 'sales_metrics',
@@ -194,27 +241,39 @@ CALL delta.system.register_table(
 Test query:
 
 ```sql
-SELECT *
+SELECT min(event_date), max(event_date), count(*)
 FROM delta.default.sales_metrics;
 ```
 
-Superset connects to Trino with a SQLAlchemy URI like:
+## Superset Dashboard
+
+Superset connects to Trino with this SQLAlchemy URI:
 
 ```text
 trino://trino@trino:8080/delta/default
 ```
 
-The dashboard should use the `delta.default.sales_metrics` dataset.
-
-### 6. Dashboard Export
-
-The exported dashboard files are stored in:
+Dataset:
 
 ```text
-dashboards/
+delta.default.sales_metrics
 ```
 
-Current exported files:
+Dashboard name:
+
+```text
+E-Commerce Lakehouse Sales Analytics
+```
+
+Dashboard charts:
+
+- `Total Revenue`: Big Number with `SUM(total_revenue)`.
+- `Total Orders`: Big Number with `SUM(total_orders)`.
+- `Revenue by Category`: Bar chart with `category` and `SUM(total_revenue)`.
+- `Orders by Category`: Bar chart with `category` and `SUM(total_orders)`.
+- `Daily Revenue Trend`: Line chart with `event_date` and `SUM(total_revenue)`.
+
+Exported dashboard files:
 
 ```text
 dashboards/Ecommerce Dashboardv1.html
@@ -225,57 +284,9 @@ Dashboard preview:
 
 ![E-Commerce Lakehouse Sales Analytics dashboard](dashboards/ecommerce-dashboard-2026-06-23T13-49-34.208Z.jpg)
 
-Recommended dashboard name:
-
-```text
-E-Commerce Lakehouse Sales Analytics
-```
-
-Recommended charts:
-
-- Big Number: `SUM(total_revenue)` as `Total Revenue`
-- Big Number: `SUM(total_orders)` as `Total Orders`
-- Bar Chart: `category` vs `SUM(total_revenue)` as `Revenue by Category`
-- Bar Chart: `category` vs `SUM(total_orders)` as `Orders by Category`
-- Line Chart: `event_date` vs `SUM(total_revenue)` as `Daily Revenue Trend`
-
-If the dashboard does not show fresh data, rerun the Gold batch after Silver finishes, then refresh the Superset chart or dashboard.
-
-## Airflow DAG
-
-Main file:
-
-```text
-airflow/dags/ecommerce_pipeline.py
-```
-
-Current DAG:
-
-```text
-generate_data -> wait_for_streaming -> gold_job
-```
-
-Tasks:
-
-- `generate_data`: produces 1000 events into Kafka.
-- `wait_for_streaming`: waits 60 seconds for Bronze and Silver to process new data.
-- `gold_job`: writes `gold.request` and waits for `gold.done` or `gold.failed`.
-
-Airflow does not call `docker exec`. Instead, Airflow communicates with `gold-runner` through this shared folder:
-
-```text
-airflow/triggers
-```
-
-Trigger files:
-
-- `gold.request`: Airflow requests a Gold batch run.
-- `gold.done`: Gold batch completed successfully.
-- `gold.failed`: Gold batch failed.
-
 ## Docker Services
 
-Main services in `docker-compose.yaml`:
+Main services:
 
 - `zookeeper`
 - `kafka`
@@ -286,115 +297,162 @@ Main services in `docker-compose.yaml`:
 - `silver-stream`
 - `gold-runner`
 - `postgres-airflow`
-- `airflow-init`
 - `airflow-webserver`
 - `airflow-scheduler`
 - `trino`
 - `superset`
 
-`postgres-airflow` is only used as the Airflow metadata database. This project currently does not use PostgreSQL as a data warehouse.
+`postgres-airflow` is used only as the Airflow metadata database. This project does not use PostgreSQL as a data warehouse.
 
 ## How To Run
 
-Start the full stack:
+Start all services:
 
 ```bash
 docker compose up -d
 ```
 
-Check running services:
+Check service status:
 
 ```bash
 docker compose ps
 ```
 
-Airflow UI:
+Open the UIs:
 
-```text
-http://localhost:8081
+| Service | URL |
+| --- | --- |
+| Airflow | http://localhost:8081 |
+| Spark Master | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+| Trino | http://localhost:8085 |
+| Superset | http://localhost:8088 |
+
+Run the daily pipeline:
+
+1. Open Airflow.
+2. Trigger DAG `ecommerce_pipeline`.
+3. Wait until all tasks are successful.
+4. Check Gold data in Trino.
+5. Refresh the Superset dashboard.
+
+Check Gold table:
+
+```bash
+docker compose exec trino trino --execute "SELECT min(event_date), max(event_date), count(*) FROM delta.default.sales_metrics"
 ```
 
-Superset UI:
+## Stop And Restart
 
-```text
-http://localhost:8088
+Recommended stop command:
+
+```bash
+docker compose stop
 ```
 
-Trino UI:
+Start again:
 
-```text
-http://localhost:8085
+```bash
+docker compose up -d
 ```
 
-MinIO Console:
+Using `docker compose stop` keeps containers, volumes, and Spark checkpoints, so the next run can continue safely.
 
-```text
-http://localhost:9001
+Avoid this command if you want to keep all runtime state:
+
+```bash
+docker compose down -v
 ```
 
-## Daily Operation
-
-After `docker compose up -d`, these streaming services should keep running:
-
-```text
-bronze-stream
-silver-stream
-```
-
-Airflow runs the `ecommerce_pipeline` DAG daily.
-
-Daily flow:
-
-```text
-1. Generate 1000 events into Kafka.
-2. Wait for Bronze/Silver streaming jobs to process the events.
-3. Trigger the Gold batch job.
-4. Update the Gold Delta table.
-5. Superset queries the latest Gold data through Trino.
-```
+`docker compose down` without `-v` keeps Docker volumes, but it recreates containers. In this project, that can reset Kafka while Spark checkpoints still exist, which may cause Bronze/Silver to skip new data until checkpoints are reset.
 
 ## Useful Commands
 
-View Bronze stream logs:
+View logs:
 
 ```bash
 docker compose logs -f bronze-stream
-```
-
-View Silver stream logs:
-
-```bash
 docker compose logs -f silver-stream
-```
-
-View Gold runner logs:
-
-```bash
 docker compose logs -f gold-runner
-```
-
-View Airflow scheduler logs:
-
-```bash
 docker compose logs -f airflow-scheduler
 ```
 
-Restart streaming jobs:
+Restart streaming services:
 
 ```bash
 docker compose restart bronze-stream silver-stream
 ```
 
-Restart Gold runner:
+Trigger Gold manually:
 
 ```bash
-docker compose restart gold-runner
+del /q airflow\triggers\gold.done airflow\triggers\gold.failed 2>nul
+echo manual-rerun > airflow\triggers\gold.request
+docker compose logs -f gold-runner
 ```
 
-Stop the stack:
+Check Kafka topic offset:
 
 ```bash
-docker compose down
+docker compose exec kafka kafka-run-class kafka.tools.GetOffsetShell --broker-list kafka:9092 --topic ecommerce-events --time -1
+```
+
+Reset streaming checkpoints after Kafka is recreated:
+
+```bash
+docker compose stop bronze-stream silver-stream
+rmdir /s /q spark\checkpoints\ecommerce-events
+rmdir /s /q spark\checkpoints\silver
+docker compose start bronze-stream silver-stream
+```
+
+Register Trino table again after container recreation:
+
+```bash
+docker compose exec trino trino --execute "CREATE SCHEMA IF NOT EXISTS delta.default WITH (location = 's3://ecommerce/'); CALL delta.system.register_table(schema_name => 'default', table_name => 'sales_metrics', table_location => 's3://ecommerce/gold/sales_metrics');"
+```
+
+## Troubleshooting
+
+### Superset does not load data
+
+Check whether Trino can query the Gold table:
+
+```bash
+docker compose exec trino trino --execute "SELECT min(event_date), max(event_date), count(*) FROM delta.default.sales_metrics"
+```
+
+If Trino says schema or table does not exist, register the table again:
+
+```bash
+docker compose exec trino trino --execute "CREATE SCHEMA IF NOT EXISTS delta.default WITH (location = 's3://ecommerce/'); CALL delta.system.register_table(schema_name => 'default', table_name => 'sales_metrics', table_location => 's3://ecommerce/gold/sales_metrics');"
+```
+
+### Gold has old data
+
+Bronze and Silver may have processed new events, but Gold may have run too early. Rerun Gold after Silver finishes:
+
+```bash
+del /q airflow\triggers\gold.done airflow\triggers\gold.failed 2>nul
+echo rerun-after-silver > airflow\triggers\gold.request
+docker compose logs -f gold-runner
+```
+
+Then verify:
+
+```bash
+docker compose exec trino trino --execute "SELECT min(event_date), max(event_date), count(*) FROM delta.default.sales_metrics"
+```
+
+### Bronze or Silver has no new data after restart
+
+If Kafka was recreated but Spark checkpoints were kept, reset the streaming checkpoints:
+
+```bash
+docker compose stop bronze-stream silver-stream
+rmdir /s /q spark\checkpoints\ecommerce-events
+rmdir /s /q spark\checkpoints\silver
+docker compose start bronze-stream silver-stream
 ```
 
 ## Project Structure
@@ -405,6 +463,10 @@ airflow/
     ecommerce_pipeline.py
   triggers/
     .gitkeep
+
+dashboards/
+  Ecommerce Dashboardv1.html
+  ecommerce-dashboard-2026-06-23T13-49-34.208Z.jpg
 
 producer/
   producer.py
@@ -429,10 +491,10 @@ docker-compose.yaml
 README.md
 ```
 
-## Notes
+## Future Improvements
 
-- Bronze and Silver are long-running streaming jobs.
-- Gold is a daily batch job triggered by Airflow.
-- Trino is a query engine, not a storage layer.
-- Superset visualizes the Gold table through Trino.
-- If the dashboard does not show fresh data, check Superset cache settings or manually refresh the chart/dashboard.
+- Persist Kafka data with a Docker volume to avoid offset/checkpoint mismatch after container recreation.
+- Replace the fixed Airflow wait task with a sensor that checks Silver checkpoint progress.
+- Compact small Delta files periodically for faster Gold batch processing.
+- Add automated data quality checks before writing Gold.
+- Add a reusable Superset import bundle for dashboard migration.
